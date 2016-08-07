@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+
+<head>
+    <meta charset="utf-8">
+
+    <title>D3 Interaction</title>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.1.0.min.js"></script>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
+          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css"
+          integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+            integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+            crossorigin="anonymous"></script>
+    <style>
+        .group-tick line {
+            stroke: #000;
+        }
+
+        .ribbons {
+            fill-opacity: 0.57;
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-inverse navbar-fixed-top">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#">Seungmin Jin's D3</a>
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+            <ul class="nav navbar-nav">
+                <li class="active"><a href="#">Circos</a></li>
+                <li><a href="heatmap_tree.html">HeatMap</a></li>
+            </ul>
+        </div><!--/.nav-collapse -->
+    </div>
+</nav>
+
+<div class="container">
+
+    <div class="starter-template">
+        <div class="jumbotron">
+            <h1 class="display-3">Circos</h1>
+            <p class="lead">Interaction : MouseOver Highlight</p>
+            <hr class="m-y-2">
+            <svg width="900" height="600"></svg>
+        </div>
+    </div>
+</div><!-- /.container -->
+
+
+
+</body>
+
+<script>
+    var nameByIndex = ["chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10", "chr11", "chr12"];
+
+    // 임의의 N차 Chords matrix 생성 함수 
+    var getMatrix = function (n) {
+        var matrix = [];
+        for (i = 0; i < n; i++) {
+            var arry = [];
+            for (j = 0; j < n; j++) {
+                arry.push(Math.random());
+            }
+            matrix.push(arry);
+        }
+        return matrix;
+    };
+
+    // 임의 매트릭스 생성
+    var matrix = getMatrix(10);
+
+    var svg = d3.select("svg"),
+            width = +svg.attr("width"),
+            height = +svg.attr("height"),
+            outerRadius = Math.min(width, height) * 0.5 - 60,
+            innerRadius = outerRadius - 50;
+    var r0 = height / 2 - 130;
+
+
+    var chord = d3.chord()
+            .padAngle(0.1)
+            .sortChords(d3.descending);
+
+
+    // 내부 arc
+    var arc = d3.arc()
+            .innerRadius(innerRadius - 50)
+            .outerRadius(outerRadius - 50);
+    // 외부 arc
+    var outer_arc = d3.arc()
+            .innerRadius(innerRadius + 50)
+            .outerRadius(outerRadius + 50);
+
+    var ribbon = d3.ribbon()
+            .radius(innerRadius);
+
+    var color = d3.scaleOrdinal(d3.schemeCategory20c);
+
+    var g = svg.append("g")
+            .attr("transform", "translate(" + width / 2 + "," + height / 2 + ")")
+            .datum(chord(matrix));
+
+    var group = g.append("g")
+            .attr("class", "groups")
+            .selectAll("g")
+            .data(function (chords) {
+                return chords.groups;
+            })
+            .enter().append("g");
+
+
+    var outer_group = g.append("g")
+            .attr("class", "chords")
+            .selectAll("g")
+            .data(function (chords) {
+                console.log(chords);
+                return chords.map(function (obj) {
+                    return obj.source;
+                });
+            })
+            .enter().append("g")
+            .style("fill", function (d) {
+                return color(d.index);
+            })
+            .on("mouseover", function (d) {
+                outer_group.style("stroke-width", function (v) {
+                    if (d == v)
+                        return 4;
+                })
+            })
+            .on("mouseout", function (d) {
+                outer_group.style("stroke-width", function (v) {
+                    return 1;
+                })
+            });
+
+    group.append("svg:text")
+            .each(function (d) {
+                d.angle = (d.startAngle + d.endAngle) / 2;
+            })
+            .attr("dy", ".35em")
+            .attr("text-anchor", function (d) {
+                return d.angle > Math.PI ? "end" : null;
+            })
+            .attr("transform", function (d) {
+                return "rotate(" + (d.angle * 180 / Math.PI - 90) + ")"
+                        + "translate(" + (r0 + 26) + ")"
+                        + (d.angle > Math.PI ? "rotate(180)" : "");
+            })
+            .text(function (d) {
+                return nameByIndex[d.index];
+            });
+
+    group.append("path")
+            .style("fill", function (d) {
+                return color(d.index);
+            })
+            .style("stroke", function (d) {
+                return d3.rgb(color(d.index)).darker();
+            })
+            .attr("d", arc);
+
+    outer_group.append("path")
+            .style("fill", function (d) {
+                return color(d.index);
+            })
+            .style("stroke", function (d) {
+                return d3.rgb(color(d.index)).darker();
+            })
+            .attr("d", outer_arc);
+
+    var rib = g.append("g")
+            .attr("class", "ribbons")
+            .selectAll("path")
+            .data(function (chords) {
+                return chords;
+            })
+            .enter().append("path")
+            .attr("d", ribbon)
+            .style("fill", function (d) {
+                return color(d.target.index);
+            })
+            .style("stroke", function (d) {
+                return d3.rgb(color(d.target.index)).darker();
+            });
+    rib.on("mouseover", function (d) {
+
+        rib.style("stroke-opacity", function (v) {
+            if (d == v)
+                return 50;
+            else
+                return 0.67;
+        }).style("fill-opacity", function (v) {
+            if (d == v)
+                return 50;
+            else
+                return 0.67;
+        }).style("stroke-width", function (v) {
+            if (d == v)
+                return 2;
+            else
+                return 1;
+        });
+    }).on("mouseout", function (d) {
+
+        rib.style("stroke-opacity", function (v) {
+            return 0.67;
+        }).style("fill-opacity", function (v) {
+            return 0.67;
+        }).style("stroke-width", function (v) {
+            return 1;
+        });
+    });
+
+    function fade(opacity, rib) {
+        return function (d, i) {
+            rib.selectAll("path.chord")
+                    .filter(function (d) {
+                        return d.source.index != i && d.target.index != i;
+                    })
+                    .transition()
+                    .style("stroke-opacity", opacity)
+                    .style("fill-opacity", opacity);
+        };
+    }
+</script>
