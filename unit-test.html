@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>grid canvas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.7.4/d3.min.js"></script>
+    <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+    <style type="text/css">
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+        }
+
+        canvas {
+            border:  1px dotted #ccc;
+        }
+        .unit {
+            padding: 3px;
+        }
+        #container{
+            display: inline-flex;
+        }
+    </style>
+</head>
+<body>
+
+<h3>Unit Performance Test</h3>
+
+<div>
+    <input type="text" id="unit_size" placeholder="Type total number of cells." value="15000">
+    <button onclick="createCanvasUnit()">Add Canvas Unit</button>
+<button onclick="createSVGUnit()">Add SVG Unit</button> </div>
+<div id="container"></div>
+
+
+<script>
+    // poly-fill//
+    var $ =  function (selector) {
+        return document.querySelectorAll(selector);
+    };
+    var log = console.log.bind(console);
+    var dir = console.dir.bind(console);
+    var replace = function(string) { return string.replace(/[^a-z0-9]/gi,""); };
+
+    // === Load and prepare the data === //
+    function makeCanvasChart(container,value) {
+        var time1 = new Date();
+        var colours = ['interpolateBrBG', 'interpolatePRGn', 'interpolatePiYG', 'interpolatePuOr', 'interpolateRdBu', 'interpolateRdGy', 'interpolateRdYlBu', 'interpolateRdYlGn', 'interpolateSpectral', 'interpolateBlues', 'interpolateGreens', 'interpolateGreys', 'interpolateOranges', 'interpolatePurples', 'interpolateReds', 'interpolateBuGn', 'interpolateBuPu', 'interpolateGnBu', 'interpolateOrRd', 'interpolatePuBuGn', 'interpolatePuBu', 'interpolatePuRd', 'interpolateRdPu', 'interpolateYlGnBu', 'interpolateYlGn', 'interpolateYlOrBr', 'interpolateYlOrRd']
+        var colourId = 8;
+        var numberScale;
+        var width = container.innerWidth,
+            height = container.innerHeight;
+        // set size of heatmap
+        // === Bind data to custom elements === //
+        container.append('h3').text('Canvas Unit-'+$('.unit').length);
+        container.append('h4');
+
+        // settings for a grid with 150 cells in a row, total 1000 rows
+        var groupSpacing = 0;
+        var cellSpacing = 1;
+        var cellSize = 5;
+        // svg replacement
+        var custom = d3.select(document.createElement("custom"));
+        var data = d3.range(value);
+        var canvas = container
+            .append('canvas')
+            .attr('width', 100*(cellSize+cellSpacing))
+            .attr('height', Math.floor(data.length/100)*(cellSize+cellSpacing));
+        var context = canvas.node().getContext('2d');
+
+        // === First call === //
+        databind(data, colourId); // ...then update the databind function
+
+        // === Bind and draw functions === //
+        function databind(data, colourId) {
+            numberScale = d3.scaleSequential(d3[colours[colourId]]).domain(d3.extent(data, function(d) { return d; }));
+            var join = custom.selectAll('custom.rect')
+                .data(data);
+            var enterSel = join.enter()
+                .append('custom')
+                .attr('class', 'rect')
+                .attr("x", function(i) {
+                    var x0 = Math.floor(i / 100) % 10, x1 = Math.floor(i % 10);
+                    return groupSpacing * x0 + (cellSpacing + cellSize) * (x1 + x0 * 10);
+                })
+                .attr("y", function(i) {
+                    var y0 = Math.floor(i / 1000), y1 = Math.floor(i % 100 / 10);
+                    return groupSpacing * y0 + (cellSpacing + cellSize) * (y1 + y0 * 10);
+                })
+                .attr('width', cellSize)
+                .attr('height', cellSize)
+                .attr('fillStyle', function(d) {
+                    return numberScale(d); });
+            // draw heatmap
+            draw(context, custom);
+        } // databind()
+        // === Draw canvas === //
+        function draw(context, el) {
+            // clear canvas
+            context.fillStyle = '#fff';
+            context.fillRect(0, 0, width, height);
+            var elements = el.selectAll('custom.rect');
+            // draw each individual custom element with their properties
+            elements.each(function(d,i) {
+                // for each virtual/custom element...
+                var node = d3.select(this);
+                context.fillStyle = node.attr('fillStyle');
+                context.fillRect(node.attr('x'), node.attr('y'), node.attr('width'), node.attr('height'))
+            });
+            var timeDiff = new Date() - time1;
+            var seconds = timeDiff/1000;
+            container.select('h4').text('Creating time = '+seconds +' s');
+        } // draw()
+    } // makeChart()
+    function makeSVGChart(container,value) {
+        var time1 = new Date();
+        var colours = ['interpolateBrBG', 'interpolatePRGn', 'interpolatePiYG', 'interpolatePuOr', 'interpolateRdBu', 'interpolateRdGy', 'interpolateRdYlBu', 'interpolateRdYlGn', 'interpolateSpectral', 'interpolateBlues', 'interpolateGreens', 'interpolateGreys', 'interpolateOranges', 'interpolatePurples', 'interpolateReds', 'interpolateBuGn', 'interpolateBuPu', 'interpolateGnBu', 'interpolateOrRd', 'interpolatePuBuGn', 'interpolatePuBu', 'interpolatePuRd', 'interpolateRdPu', 'interpolateYlGnBu', 'interpolateYlGn', 'interpolateYlOrBr', 'interpolateYlOrRd']
+        var colourId = 8;
+        var numberScale;
+        var width = container.innerWidth,
+            height = container.innerHeight;
+        // set size of heatmap
+        // === Bind data to custom elements === //
+        container.append('h3').text('SVG Unit-'+$('.unit').length);
+        container.append('h4');
+
+        // settings for a grid with 150 cells in a row, total 1000 rows
+        var groupSpacing = 0;
+        var cellSpacing = 1;
+        var cellSize = 5;
+        var data = d3.range(value);
+        // svg replacement
+        var custom = d3.select(document.createElement("custom"));
+        var canvas = container
+            .append('svg')
+            .attr('width', 100*(cellSize+cellSpacing))
+            .attr('height', Math.floor(data.length/100)*(cellSize+cellSpacing));
+
+        // === First call === //
+        databind(data, colourId); // ...then update the databind function
+
+        // === Bind and draw functions === //
+        function databind(data, colourId) {
+            numberScale = d3.scaleSequential(d3[colours[colourId]]).domain(d3.extent(data, function(d) { return d; }));
+            var join = canvas.selectAll('rect')
+                .data(data);
+            var enterSel = join.enter()
+                .append('rect')
+                .attr('class', 'rect')
+                .attr("x", function(i) {
+                    var x0 = Math.floor(i / 100) % 10, x1 = Math.floor(i % 10);
+                    return groupSpacing * x0 + (cellSpacing + cellSize) * (x1 + x0 * 10);
+                })
+                .attr("y", function(i) {
+                    var y0 = Math.floor(i / 1000), y1 = Math.floor(i % 100 / 10);
+                    return groupSpacing * y0 + (cellSpacing + cellSize) * (y1 + y0 * 10);
+                })
+                .attr('width', cellSize)
+                .attr('height', cellSize)
+                .attr('fill', function(d) {
+                    return numberScale(d); });
+
+            var timeDiff = new Date() - time1;
+            var seconds = timeDiff/1000;
+            container.select('h4').text('Creating time = '+seconds +' s');
+        } // databind()
+    } // makeChart()
+    function createCanvasUnit() {
+        var container = d3.select('#container');
+        var size = $('#unit_size')[0].value;
+        if (size == "") {
+            alert('Type the total number of cells');
+            return
+        }
+        var unit = container
+            .append('div')
+            .classed('unit',true)
+            .style('width',500)
+            .style('height',500)
+            .style('display','block')
+            .style('overflow','auto');
+        makeCanvasChart(unit, parseInt(size));
+        return unit;
+    }
+    function createSVGUnit() {
+        var size = $('#unit_size')[0].value;
+        if (size == "") {
+            alert('Type the total number of cells');
+            return;
+        }
+        var container = d3.select('#container');
+        var unit = container
+            .append('div')
+            .classed('unit',true)
+            .style('width',500)
+            .style('height',500)
+            .style('display','block')
+            .style('overflow','auto');
+        makeSVGChart(unit, parseInt(size));
+        return unit;
+    }
+</script>
+
+</body>
+</html>
