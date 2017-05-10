@@ -1,0 +1,126 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Circos</title>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet"
+          integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css?family=Roboto:regular,bold,italic,thin,light,bolditalic,black,medium&amp;lang=en">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/9.8.0/css/bootstrap-slider.min.css"/>
+    <style>
+        body {
+            font-family: Roboto !important;
+        }
+    </style>
+</head>
+<body class="container">
+<div class="control-group" style="display: block">
+    <h4>Circos
+    <a class="pull-right btn btn-xs btn-default svg-download"><span class="glyphicon glyphicon-download"></span> SVG
+        Download</a>
+    <label class="pull-right btn btn-xs btn-primary" for="my-file-selector" style="margin-right: 3px">
+        <input id="my-file-selector" type="file" style="display:none;" onchange="mafParser.openFile(event);$('#upload-file-info').css('display','block')
+                .html($(this).val().split('\\').slice('-1')[0]);">
+        <span class="glyphicon glyphicon-upload"> </span> DATA Upload
+    </label>
+    <span class='pull-right btn btn-xs btn-default' id="upload-file-info" disabled="true"
+          style="display: none"></span>
+    </h4>
+</div>
+<div>
+    <div class="input-group">
+    <span class="min-score btn btn-xs btn-warning" style="margin-right: 10px;cursor:auto"> MIN</span><input class="hide btn btn-default btn-xs" type="text" id="input-lr" style="width: 80px;margin-right: 10px"> <input id="score" type="text"
+                                                                                             class="span2" value=""
+                                                                                             onchange="score_filter(this.value)"/> <input class="btn btn-default btn-xs hide" type="text" id="input-rr" style="margin-left: 10px;width: 80px;"><span
+        class="max-score btn btn-xs btn-warning" style="margin-left: 10px;cursor: auto"> MAX</span>
+    <input type="button" class="btn btn-danger btn-xs" value="Draw All" onclick="circos.drawAll();">
+        <input class="btn btn-warning btn-xs label-arc pull-right" type="button" disabled=disabled style="display: none;color: #000;margin-left: 50px">
+    </div>
+
+</div>
+
+<div style="position: relative" id="canvas_container">
+    <canvas id="ribbon" style="position: absolute; z-index: -1;"></canvas>
+    <img id="loading" src="/genovis/static/loading.svg" style="position: absolute;display: none">
+</div>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+<script src="http://code.jquery.com/jquery-3.2.1.min.js"
+        integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+        crossorigin="anonymous"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"
+        integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa"
+        crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-slider/9.8.0/bootstrap-slider.min.js"></script>
+<script src='js/pollyfills.js'></script>
+<script src="js/mafParser.js"></script>
+<script src="js/circos.js"></script>
+<script src="https://cdn.jsdelivr.net/lodash/4.17.4/lodash.min.js"></script>
+<script>
+    var loading;
+    var slider;
+    $(document).ready(function () {
+        slider = $("#score").slider({tooltip_position: 'bottom',handle:'triangle'});
+        //mafParser.init();
+        //circos.init();
+        loading = d3.select('#loading');
+        $('a.svg-download').on('click', function () {
+            var temp = circos.A_SVG.node().cloneNode(true);
+            temp.appendChild(circos.R_SVG.select('g').node());
+            writeDownloadLink(temp, 'circos');
+        });
+    });
+    function score_filter(score) {
+        log(score)
+        //document.getElementById("range").innerHTML = score;
+        //score_f = score;
+        //ribbon(score_f);
+    }
+    function writeDownloadLink(svg, title) {
+        try {
+            var isFileSaverSupported = !!new Blob();
+        } catch (e) {
+            alert("blob not supported");
+        }
+
+        var serializer = new XMLSerializer();
+        var html = serializer.serializeToString(svg);
+
+        var blob = new Blob([html], {type: "image/svg+xml"});
+        saveAs(blob, title + ".svg");
+    }
+
+    function saveAs(blob, filename) {
+        var svgUrl = URL.createObjectURL(blob);
+        var downloadLink = document.createElement("a");
+        downloadLink.href = svgUrl;
+        downloadLink.download = filename;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    }
+    function svgToCanvas(svg) {
+        // Select the first svg element
+        var img = new Image(),
+            serializer = new XMLSerializer(),
+            svgStr = serializer.serializeToString(svg);
+        //img.src = 'data:image/svg+xml;base64,'+window.btoa(svgStr);
+
+        // You could also use the actual string without base64 encoding it:
+        //img.src = "data:image/svg+xml;utf8," + svgStr;
+        //context.drawImage(img,0,0,width,height);
+        var DOMURL = this.URL || this.webkitURL || this;
+        var svgImg = new Blob([svgStr], {type: "image/svg+xml;charset=utf-8"});
+        var url = DOMURL.createObjectURL(svgImg);
+        img.onload = function () {
+            circos.CTX.drawImage(img, 0, 0);
+            loading.style('display', 'none');
+            DOMURL.revokeObjectURL(url);
+        };
+        img.src = url;
+    }
+</script>
+</body>
+</html>
